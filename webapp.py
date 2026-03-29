@@ -114,6 +114,10 @@ TEMPLATE = """
         <label>Город/регион</label>
         <input type="text" name="area" value="{{ area }}" placeholder="Москва, Санкт-Петербург, Новосибирск">
       </div>
+      <div>
+        <label>Мин. вакансий на компанию</label>
+        <input type="number" name="company_min" min="1" max="50" value="{{ company_min }}">
+      </div>
     </div>
 
     <button type="submit" style="margin-top:16px;padding:10px 20px;">Запустить сбор и анализ</button>
@@ -170,11 +174,12 @@ TEMPLATE = """
   {% if companies_rows %}
     <h3>Топ платёжеспособных компаний</h3>
     <table border="1" cellpadding="6" cellspacing="0">
-      <tr><th>Компания</th><th>Вакансий</th><th>Средняя (RUB)</th><th>Медиана</th></tr>
+      <tr><th>Компания</th><th>Вакансий</th><th>Доля вакансий с ЗП</th><th>Средняя (RUB)</th><th>Медиана</th></tr>
       {% for row in companies_rows %}
         <tr>
-          <td>{{ row.employer }}</td>
+          <td><a href="{{ row.employer_url or '#' }}" target="_blank">{{ row.employer }}</a></td>
           <td>{{ row.vacancies }}</td>
+          <td>{{ "%.1f"|format(row.salary_share*100) }}%</td>
           <td>{{ "%.0f"|format(row.avg_salary) }}</td>
           <td>{{ "%.0f"|format(row.med_salary) }}</td>
         </tr>
@@ -221,6 +226,7 @@ def index():
         "pages": 1,
         "details": False,
         "area": "",
+        "company_min": "1",
     }
 
     if request.method == "POST":
@@ -228,6 +234,7 @@ def index():
         pages = int(request.form.get("pages", 1))
         details = request.form.get("details") == "on"
         area_input = request.form.get("area") or None
+        company_min = int(request.form.get("company_min", "1") or "1")
 
         keywords = [k.strip() for k in keywords_raw.splitlines() if k.strip()]
 
@@ -271,7 +278,7 @@ def index():
                 skills_series = top_skills(df)
                 skills_full = top_skills_with_salary(df, top_n=15)
                 skills_by_salary = skills_salary(df)
-                companies = companies_salary(df)
+                companies = companies_salary(df, min_count=company_min)
                 cities_series = top_cities(df)
                 timeline_series = publications_over_time(df)
                 salary_count = df["mid_salary"].notna().sum()
@@ -297,6 +304,7 @@ def index():
                 "pages": pages,
                 "details": details,
                 "area": area_input or "",
+                "company_min": str(company_min),
             }
         )
 

@@ -64,12 +64,13 @@ def companies_salary(df: pd.DataFrame, min_count: int = 1):
     """Топ компаний по средней зарплате (учитываются все вакансии с указанной зарплатой)."""
 
     subset = df[df["mid_salary"].notna() & df["employer"].notna()]
-    grp = subset.groupby("employer")["mid_salary"]
+    grp = subset.groupby(["employer", "employer_url"])["mid_salary"]
     stats = grp.agg(["count", "mean", "median"]).rename(
         columns={"count": "vacancies", "mean": "avg_salary", "median": "med_salary"}
     )
     stats = stats[stats["vacancies"] >= min_count].sort_values("avg_salary", ascending=False)
-    return stats
+    stats["salary_share"] = stats["vacancies"] / stats["vacancies"].sum()
+    return stats.reset_index()
 
 
 def top_cities(df: pd.DataFrame, top_n: int = 10):

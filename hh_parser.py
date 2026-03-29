@@ -74,6 +74,8 @@ class Vacancy:
     id: str
     name: str
     employer: str
+    employer_id: str
+    employer_url: str
     city: str
     experience: str
     published_at: str
@@ -103,6 +105,7 @@ class HHParser:
         experience: Optional[str] = None,
         only_with_salary: bool = False,
         max_items: Optional[int] = None,
+        filter_keywords: Optional[List[str]] = None,
     ) -> None:
         self.delay = 1 / rate_limit_per_sec
         self.max_retries = max_retries
@@ -112,6 +115,7 @@ class HHParser:
         self.experience = experience
         self.only_with_salary = only_with_salary
         self.max_items = max_items
+        self.filter_keywords = [k.lower() for k in filter_keywords] if filter_keywords else []
 
     def _request(self, url: str, params: Optional[Dict] = None) -> Dict:
         """Выполнить GET-запрос с повторами и бэкоффом."""
@@ -196,6 +200,9 @@ class HHParser:
                     logging.info("Пустая страница %s — останавливаю запросы по ключу '%s'", page + 1, keyword)
                     break
                 for raw in items:
+                    name_lower = (raw.get("name") or "").lower()
+                    if self.filter_keywords and not any(k in name_lower for k in self.filter_keywords):
+                        continue
                     detail = {}
                     try:
                         detail = self._fetch_detail(raw.get("id")) if self.fetch_details else {}
@@ -208,12 +215,17 @@ class HHParser:
                     salary = raw.get("salary") or {}
                     area = raw.get("area") or {}
                     experience = raw.get("experience") or {}
-                    employer = (raw.get("employer") or {}).get("name", "")
+                    employer_block = raw.get("employer") or {}
+                    employer = employer_block.get("name", "")
+                    employer_id = employer_block.get("id", "")
+                    employer_url = employer_block.get("alternate_url", "")
                     vacancies.append(
                         Vacancy(
                             id=str(raw.get("id")),
                             name=raw.get("name", ""),
                             employer=employer,
+                            employer_id=employer_id,
+                            employer_url=employer_url,
                             city=area.get("name", ""),
                             experience=experience.get("name", ""),
                             published_at=raw.get("published_at", ""),
@@ -250,6 +262,7 @@ def fetch_vacancies(
 ) -> List[Dict]:
     """Удобная обёртка, возвращающая словари."""
 
+    keywords_list = list(keywords)
     parser = HHParser(
         rate_limit_per_sec=rate_limit_per_sec,
         max_retries=max_retries,
@@ -259,8 +272,9 @@ def fetch_vacancies(
         experience=experience,
         only_with_salary=only_with_salary,
         max_items=max_items,
+        filter_keywords=keywords_list,
     )
-    return [v.to_dict() for v in parser.fetch(keywords, pages=pages, per_page=per_page)]
+    return [v.to_dict() for v in parser.fetch(keywords_list, pages=pages, per_page=per_page)]
 
 
 __all__ = ["HHParser", "Vacancy", "fetch_vacancies"]
