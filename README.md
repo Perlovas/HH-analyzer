@@ -36,7 +36,7 @@ pip install -r requirements.txt
 
 ## Запуск (CLI)
 ```bash
-python main.py --keywords "Python разработчик" "Data Scientist" --pages 10 --with-salary
+python main.py --keywords "Python разработчик" "Data Scientist" --pages 10
 ```
 Аргументы:
 - `--keywords` (обяз.) — список поисковых фраз.
@@ -62,6 +62,4 @@ python webapp.py
 - Ограничение ~2000 вакансий, 1 запрос/сек.
 - Повторы при ошибках с увеличением задержки.
 
-## Лицензия
-MIT
 
