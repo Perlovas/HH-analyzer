@@ -1,0 +1,8 @@
+requests
+pandas
+matplotlib
+seaborn
+beautifulsoup4
+plotly
+pymorphy2
+flask
